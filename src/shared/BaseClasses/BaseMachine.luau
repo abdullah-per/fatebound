@@ -15,8 +15,8 @@ function BaseMachine.new(machineName: string)
 	self.Name = machineName or "DefaultMachine"
 
 	self.States = {}
-
 	self.DefaultState = nil
+
 	self.CurrentState = nil
 	self.PreviousState = nil
 
@@ -29,23 +29,25 @@ function BaseMachine:ChangeState(newState)
 	self.PreviousState = self.CurrentState
 	self.CurrentState = newState
 
-	self.PreviousState:Exit()
-	self.CurrentState:Enter()
+	self.PreviousState:Exit(self)
+	self.CurrentState:Enter(self)
 end
 
 function BaseMachine:DelegateInput(input: InputObject, eventType: string)
 	if self.Enabled then
-		self.CurrentState:HandleInput(input, eventType)
+		self.CurrentState:HandleInput(self, input, eventType)
 	end
 end
 
 function BaseMachine:DelegateUpdate(deltaTime)
 	if self.Enabled then
-		self.CurrentState:Update(deltaTime)
+		self.CurrentState:Update(self, deltaTime)
 	end
 end
 
-function BaseMachine:Enter()
+function BaseMachine:Enable(state)
+	self.CurrentState = state or self.DefaultState
+
 	local inputBegan = UserInputService.InputBegan:Connect(function(input, _gameProc)
 		if not _gameProc then
 			self:DelegateInput(input, "began")
@@ -65,9 +67,11 @@ function BaseMachine:Enter()
 	table.insert(self.Connections, inputBegan)
 	table.insert(self.Connections, inputEnded)
 	table.insert(self.Connections, update)
+
+	self.CurrentState:Enter(self)
 end
 
-function BaseMachine:Exit()
+function BaseMachine:Disable()
 	for _, connection in self.Connections do
 		connection:Disconnect()
 	end
