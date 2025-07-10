@@ -40,6 +40,8 @@ function BaseMachine:DelegateInput(input: InputObject, eventType: string)
 end
 
 function BaseMachine:DelegateUpdate(deltaTime)
+	-- print(self.Current_Stamina)
+
 	if self.Enabled then
 		self.CurrentState:Update(self, deltaTime)
 	end
@@ -47,6 +49,7 @@ end
 
 function BaseMachine:Enable(state)
 	self.CurrentState = state or self.DefaultState
+	self.Enabled = true
 
 	local inputBegan = UserInputService.InputBegan:Connect(function(input, _gameProc)
 		if not _gameProc then
@@ -54,7 +57,7 @@ function BaseMachine:Enable(state)
 		end
 	end)
 
-	local inputEnded = UserInputService.InputBegan:Connect(function(input, _gameProc)
+	local inputEnded = UserInputService.InputEnded:Connect(function(input, _gameProc)
 		if not _gameProc then
 			self:DelegateInput(input, "ended")
 		end
@@ -75,6 +78,8 @@ function BaseMachine:Disable()
 	for _, connection in self.Connections do
 		connection:Disconnect()
 	end
+
+	self.Enabled = false
 end
 
 return BaseMachine

@@ -1,1 +1,5 @@
-print("Hello world, from player!")
+game.Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function(character)
+		character.Archivable = true
+	end)
+end)
