@@ -11,12 +11,14 @@ local WalkState = BaseState.new("WalkState")
 function WalkState:Enter(stateMachine)
 	stateMachine.AnimationHandler:Play("Walk")
 	stateMachine.CameraHandler:ChangeFOV("Walk")
-	stateMachine.Humanoid.WalkSpeed = stateMachine.WalkSpeed
+	stateMachine.Humanoid.WalkSpeed = stateMachine.Controller.PlayerConfigs.WalkSpeed
 end
 
 function WalkState:HandleInput(stateMachine, input, eventType)
 	if input.KeyCode == Enum.KeyCode.Q then
 		stateMachine:ChangeState(stateMachine.States.DashState)
+	elseif input.KeyCode == Enum.KeyCode.Space then
+		stateMachine:ChangeState(stateMachine.States.JumpState)
 	elseif not InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
 		stateMachine:ChangeState(stateMachine.States.IdleState)
 	end

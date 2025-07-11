@@ -9,7 +9,6 @@ local BackDash = require(ReplicatedStorage.Shared.Movement.BackDash)
 local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
 --// Configs
-local GHOST_TIME = 1
 local CURRENT_GHOST_TIME = 0
 
 --// Instances
@@ -19,15 +18,25 @@ local DashSpring = Spring.create(Spring, 7)
 local DashState = BaseState.new("DashState")
 
 local waitForGhost = false
+local accumulatedTime = 0
 function DashState:Enter(stateMachine)
-	stateMachine.CameraHandler:ChangeFOV("Dash")
-
-	if InputHandler.AllPressed(Enum.KeyCode.S) then -- back
+	local playerConfigs = stateMachine.Controller.PlayerConfigs
+	if InputHandler.AllPressed(Enum.KeyCode.S) and playerConfigs.DashCharges >= 3 then -- back
 		stateMachine.AnimationHandler:Play("Dash_Back")
-		DashSpring.shove(DashSpring, Vector3.new(0, 0, stateMachine.BackDashDistance))
+		stateMachine.CameraHandler:ChangeFOV("Dash")
+
+		playerConfigs.DashCharges = 0
+
+		task.spawn(function()
+			task.wait(stateMachine.AnimationHandler.Tracks.Dash_Back.Length + 0.1)
+			stateMachine.AnimationHandler:Play("Ghost_Idle")
+		end)
+
+		stateMachine.SoundHandler:Play("Dash_Back")
+		DashSpring.shove(DashSpring, Vector3.new(0, 0, playerConfigs.BackDashDistance))
 
 		-- ghost dash logic
-		CURRENT_GHOST_TIME = GHOST_TIME
+		CURRENT_GHOST_TIME = stateMachine.SoundHandler.Tracks.Dash_Back.TimeLength
 		stateMachine.Humanoid.WalkSpeed = 30
 
 		waitForGhost = true
@@ -37,24 +46,40 @@ function DashState:Enter(stateMachine)
 		waitForGhost = false
 
 		return
-	elseif InputHandler.AllPressed(Enum.KeyCode.A) then -- left
+	elseif InputHandler.AllPressed(Enum.KeyCode.A) and playerConfigs.DashCharges >= 1 then -- left
 		stateMachine.AnimationHandler:Play("Dash_Left")
-		DashSpring.shove(DashSpring, Vector3.new(-stateMachine.SideDashDistance, 0, 0))
-	elseif InputHandler.AllPressed(Enum.KeyCode.D) then -- right
+		stateMachine.SoundHandler:Play("Dash_Side")
+		stateMachine.CameraHandler:ChangeFOV("Dash")
+
+		playerConfigs.DashCharges -= 1
+		DashSpring.shove(DashSpring, Vector3.new(-playerConfigs.SideDashDistance, 0, 0))
+	elseif InputHandler.AllPressed(Enum.KeyCode.D) and playerConfigs.DashCharges >= 1 then -- right
 		stateMachine.AnimationHandler:Play("Dash_Right")
-		DashSpring.shove(DashSpring, Vector3.new(stateMachine.SideDashDistance, 0, 0))
-	else
+		stateMachine.SoundHandler:Play("Dash_Side")
+		stateMachine.CameraHandler:ChangeFOV("Dash")
+
+		playerConfigs.DashCharges -= 1
+		DashSpring.shove(DashSpring, Vector3.new(playerConfigs.SideDashDistance, 0, 0))
+	elseif
+		not InputHandler.AnyPressed(Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D)
+		and playerConfigs.DashCharges >= 2
+	then
 		-- auto lock logic
 		stateMachine.AnimationHandler:Play("Dash_Front")
-		DashSpring.shove(DashSpring, Vector3.new(0, 0, -stateMachine.FrontDashDistance))
+		stateMachine.SoundHandler:Play("Dash_Side")
+		stateMachine.CameraHandler:ChangeFOV("Dash")
+		playerConfigs.DashCharges -= 2
+		DashSpring.shove(DashSpring, Vector3.new(0, 0, -playerConfigs.FrontDashDistance))
+	else
+		accumulatedTime += 0.4
+		print("NOT ENOUGH CHARGES!!!")
 	end
 
-	CURRENT_GHOST_TIME = 0
+	CURRENT_GHOST_TIME = 0 -- resetting ghost
 end
 
-local accumulatedTime = 0
 function DashState:Update(stateMachine, deltaTime)
-	if accumulatedTime <= 0.4 then
+	if accumulatedTime <= stateMachine.Controller.PlayerConfigs.DashDuration then
 		accumulatedTime += deltaTime
 		local UpdatedPosition = DashSpring.update(DashSpring, deltaTime)
 		stateMachine.HumanoidRP.CFrame *= CFrame.new(UpdatedPosition.X, UpdatedPosition.Y, UpdatedPosition.Z)
@@ -65,7 +90,9 @@ function DashState:Update(stateMachine, deltaTime)
 
 		accumulatedTime = 0 -- reset for next dash
 
-		if InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
+		if InputHandler.AllPressed(Enum.KeyCode.Q) then
+			DashState:Enter(stateMachine)
+		elseif InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
 			if stateMachine.PreviousState == stateMachine.States.RunState then
 				stateMachine:ChangeState(stateMachine.States.RunState)
 			else

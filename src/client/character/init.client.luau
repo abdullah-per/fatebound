@@ -10,6 +10,24 @@ local StateMachineController = require(ReplicatedStorage.Shared.Controller.State
 local Controller = StateMachineController.new(MovementMachine)
 Controller:EnableAllStates()
 
+local playerConfigs = {
+	RunSpeed = 22,
+	WalkSpeed = 10,
+	FrontDashDistance = 8,
+	SideDashDistance = 6,
+	BackDashDistance = 8,
+
+	DashDuration = 0.4,
+	DashCharges = 3,
+	MaxDashCharges = 3,
+	DashRechargeTime = 0.5,
+}
+
+Controller.PlayerConfigs = playerConfigs
+task.wait(10)
+print(Controller.PlayerConfigs)
+
+--// Wind
 local WindEffect = Wind.new({
 	Location = game.Workspace.Camera,
 	Randomized = false,
