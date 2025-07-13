@@ -19,6 +19,7 @@ function BaseMachine.new(machineName: string)
 
 	self.CurrentState = nil
 	self.PreviousState = nil
+	self.BeforePreviousState = nil
 
 	self.Enabled = false
 	self.Connections = {}
@@ -26,10 +27,13 @@ function BaseMachine.new(machineName: string)
 end
 
 function BaseMachine:ChangeState(newState)
+	self.BeforePreviousState = self.PreviousState
 	self.PreviousState = self.CurrentState
 	self.CurrentState = newState
 
-	self.PreviousState:Exit(self)
+	if self.PreviousState then
+		self.PreviousState:Exit(self)
+	end
 	self.CurrentState:Enter(self)
 end
 

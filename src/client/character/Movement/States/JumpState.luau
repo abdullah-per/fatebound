@@ -22,7 +22,11 @@ end
 function JumpState:Update(stateMachine, deltaTime)
 	if stateMachine.Humanoid:GetState() == Enum.HumanoidStateType.Landed then
 		if InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
-			if stateMachine.PreviousState == stateMachine.States.RunState then
+			-- Check if we should return to running state
+			if
+				stateMachine.PreviousState == stateMachine.States.RunState
+				or stateMachine.BeforePreviousState == stateMachine.States.RunState
+			then
 				stateMachine:ChangeState(stateMachine.States.RunState)
 			else
 				stateMachine:ChangeState(stateMachine.States.WalkState)

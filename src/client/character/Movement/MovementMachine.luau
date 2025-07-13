@@ -51,7 +51,7 @@ function MovementMachine:DelegateUpdate(deltaTime)
 		end
 	end
 
-	print(self.Controller.PlayerConfigs.DashCharges)
+	-- print(self.Controller.PlayerConfigs.DashCharges)
 end
 
 return MovementMachine

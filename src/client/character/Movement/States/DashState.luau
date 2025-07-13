@@ -8,6 +8,9 @@ local BaseState = require(ReplicatedStorage.Shared.BaseClasses.BaseState)
 local BackDash = require(ReplicatedStorage.Shared.Movement.BackDash)
 local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
+--// RemoteEvents
+local BackDashEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Movement"):WaitForChild("BackDashEvent")
+
 --// Configs
 local CURRENT_GHOST_TIME = 0
 
@@ -19,6 +22,8 @@ local DashState = BaseState.new("DashState")
 
 local waitForGhost = false
 local accumulatedTime = 0
+local isBackDashing = false
+
 function DashState:Enter(stateMachine)
 	local playerConfigs = stateMachine.Controller.PlayerConfigs
 	if InputHandler.AllPressed(Enum.KeyCode.S) and playerConfigs.DashCharges >= 3 then -- back
@@ -40,12 +45,17 @@ function DashState:Enter(stateMachine)
 		stateMachine.Humanoid.WalkSpeed = 30
 
 		waitForGhost = true
+		isBackDashing = true
 		local ragdoll = BackDash.Enable(stateMachine.Character)
 		task.wait(CURRENT_GHOST_TIME)
 		BackDash.Disable(stateMachine.Character, ragdoll)
 		waitForGhost = false
+		isBackDashing = false
 
-		return
+		-- Fire server event to replicate visual effects to other players
+		-- Only fire when backdash is actually successful
+		DashSpring.shove(DashSpring, Vector3.new(0, 0, playerConfigs.FrontDashDistance))
+		BackDashEvent:FireServer()
 	elseif InputHandler.AllPressed(Enum.KeyCode.A) and playerConfigs.DashCharges >= 1 then -- left
 		stateMachine.AnimationHandler:Play("Dash_Left")
 		stateMachine.SoundHandler:Play("Dash_Side")
@@ -72,14 +82,14 @@ function DashState:Enter(stateMachine)
 		DashSpring.shove(DashSpring, Vector3.new(0, 0, -playerConfigs.FrontDashDistance))
 	else
 		accumulatedTime += 0.4
-		print("NOT ENOUGH CHARGES!!!")
 	end
 
 	CURRENT_GHOST_TIME = 0 -- resetting ghost
 end
 
 function DashState:Update(stateMachine, deltaTime)
-	if accumulatedTime <= stateMachine.Controller.PlayerConfigs.DashDuration then
+	-- Apply Spring movement for all dash types
+	if accumulatedTime <= stateMachine.Controller.PlayerConfigs.DashDuration or isBackDashing then
 		accumulatedTime += deltaTime
 		local UpdatedPosition = DashSpring.update(DashSpring, deltaTime)
 		stateMachine.HumanoidRP.CFrame *= CFrame.new(UpdatedPosition.X, UpdatedPosition.Y, UpdatedPosition.Z)
@@ -93,7 +103,11 @@ function DashState:Update(stateMachine, deltaTime)
 		if InputHandler.AllPressed(Enum.KeyCode.Q) then
 			DashState:Enter(stateMachine)
 		elseif InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
-			if stateMachine.PreviousState == stateMachine.States.RunState then
+			-- Check if we should return to running state
+			if
+				stateMachine.PreviousState == stateMachine.States.RunState
+				or stateMachine.BeforePreviousState == stateMachine.States.RunState
+			then
 				stateMachine:ChangeState(stateMachine.States.RunState)
 			else
 				stateMachine:ChangeState(stateMachine.States.WalkState)
