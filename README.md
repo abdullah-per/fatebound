@@ -1,7 +1,5 @@
 # Fatebound
 
-A Roblox game featuring advanced combat mechanics, character movement systems, and inventory management.
-
 ## 🎮 Features
 
 ### Combat System
