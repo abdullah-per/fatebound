@@ -1,6 +1,6 @@
 # Fatebound
 
-Welcome to **Fatebound** – a modular Roblox action RPG framework designed for rapid prototyping and robust gameplay. This project features a modern, state-driven architecture for combat, movement, and inventory, with a focus on extensibility, security, and smooth player experience.
+**Fatebound** is an open-world adventure combat RPG game made in roblox.
 
 ---
 
