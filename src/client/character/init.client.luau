@@ -3,8 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Imports
 local Controller = require(ReplicatedStorage.Shared.Controller.StateMachineController)
-local MovementMachine = require(script.Movement.MovementMachine)
-local CombatMachine = require(script.Combat.CombatStateMachine)
+local MovementMachine = require(script.General.GeneralMachine)
 local BackDashVisualHandler = require(script.BackDashVisualHandler)
 local ClimbStateMachine = require(script.Climb.ClimbStateMachine)
 
@@ -24,7 +23,7 @@ end)
 PlayerConfigEvent:FireServer()
 
 --// Setup machines
-local controller = Controller.new(MovementMachine, CombatMachine)
+local controller = Controller.new(MovementMachine)
 
 --// Enable machines
 controller:EnableAllStates()

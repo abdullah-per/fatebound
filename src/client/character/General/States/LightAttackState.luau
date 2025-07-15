@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 --// Imports
 local BaseState = require(ReplicatedStorage.Shared.BaseClasses.BaseState)
 local CombatUtils = require(ReplicatedStorage.Shared.Utilities.CombatUtils)
+local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
 --// RemoteEvents
 local HitEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Combat"):WaitForChild("HitEvent")
@@ -30,24 +31,9 @@ end
 function LightAttackState:Enter(stateMachine)
 	local configs = stateMachine.Controller.PlayerConfigs
 
-	-- Find MovementMachine from controller's StateMachines
-	local movementMachine = nil
-	for _, machine in ipairs(stateMachine.Controller.StateMachines or {}) do
-		if machine.Name == "MovementStateMachine" then
-			movementMachine = machine
-			break
-		end
-	end
-
-	-- Disable movement state machine
-	if stateMachine.Controller and stateMachine.Controller.SetStateMachineEnabled and movementMachine then
-		print("[LightAttack] Disabling movement state machine for attack")
-		stateMachine.Controller:SetStateMachineEnabled(movementMachine, false)
-	end
-
 	-- Update combo tracking
 	local currentTime = os.clock()
-	local timeSinceLastAttack = currentTime - self.lastAttackTime
+	local timeSinceLastAttack = currentTime - (self.lastAttackTime or 0)
 
 	if timeSinceLastAttack <= configs.LightAttackComboWindow then
 		self.comboCount += 1
@@ -60,44 +46,48 @@ function LightAttackState:Enter(stateMachine)
 		self.comboCount = 1
 	end
 
+	self.lastAttackTime = currentTime
+
+	-- Slow the player
+	self._originalWalkSpeed = stateMachine.Humanoid.WalkSpeed
+	stateMachine.Humanoid.WalkSpeed = 2
+
+	stateMachine.AnimationHandler:Play(`M{self.comboCount}`)
+	local animTrack = stateMachine.AnimationHandler.Tracks[`M{self.comboCount}`]
+	local animLength = animTrack and animTrack.Length or 0.5
+
+	-- Temporary delay before hit detection for realism
+	task.wait(0.15)
+
 	-- Detect enemies in range
 	local characterRoot = stateMachine.Character.HumanoidRootPart
 	local detectionPosition = characterRoot.CFrame * CFrame.new(0, 0, -configs.LightAttackDetectionRange)
-
 	local detectedParts =
 		workspace:GetPartBoundsInBox(detectionPosition, configs.LightAttackDetectionSize, overlapParams)
-
-	-- Get unique parent objects (characters) from detected parts
 	local uniqueTargets = CombatUtils.getUniqueParentsFromParts(detectedParts)
 
-	-- Send hit event to server if targets were detected
 	if #uniqueTargets > 0 then
 		HitEvent:FireServer("LightAttack", uniqueTargets)
 	end
 
-	-- Effects
-	print("[LightAttack] Playing animation: M" .. tostring(self.comboCount))
-	stateMachine.AnimationHandler:Play(`M{self.comboCount}`)
-	task.wait(stateMachine.AnimationHandler.Tracks[`M{self.comboCount}`].Length)
-	print("[LightAttack] Animation finished, re-enabling movement state machine")
+	-- Wait for animation to finish
+	task.wait(animLength - 0.15)
 
-	if stateMachine.Controller and stateMachine.Controller.SetStateMachineEnabled and movementMachine then
-		stateMachine.Controller:SetStateMachineEnabled(movementMachine, true)
-		local InputHandler = require(game:GetService("ReplicatedStorage").Shared.Utilities.InputHandler)
-		if InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
-			if
-				movementMachine.PreviousState == movementMachine.States.RunState
-				or movementMachine.BeforePreviousState == movementMachine.States.RunState
-			then
-				movementMachine:ChangeState(movementMachine.States.RunState)
-			else
-				movementMachine:ChangeState(movementMachine.States.WalkState)
-			end
+	-- Restore speed
+	stateMachine.Humanoid.WalkSpeed = self._originalWalkSpeed or configs.WalkSpeed
+
+	if InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
+		if
+			stateMachine.PreviousState == stateMachine.States.RunState
+			or stateMachine.BeforePreviousState == stateMachine.States.RunState
+		then
+			stateMachine:ChangeState(stateMachine.States.RunState)
 		else
-			movementMachine:ChangeState(movementMachine.States.IdleState)
+			stateMachine:ChangeState(stateMachine.States.WalkState)
 		end
+	else
+		stateMachine:ChangeState(stateMachine.States.IdleState)
 	end
-	stateMachine:ChangeState(stateMachine.States.IdleState)
 end
 
 return LightAttackState

@@ -24,7 +24,17 @@ end
 
 local lastW = os.clock()
 function IdleState:HandleInput(stateMachine, input, eventType)
-	if input.KeyCode == Enum.KeyCode.Q then
+	if eventType ~= "began" then
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		stateMachine:ChangeState(stateMachine.States.LightAttackState)
+	elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+		stateMachine:ChangeState(stateMachine.States.HeavyAttackState)
+	elseif input.KeyCode == Enum.KeyCode.F then
+		stateMachine:ChangeState(stateMachine.States.BlockState)
+	elseif input.KeyCode == Enum.KeyCode.Q then
 		stateMachine:ChangeState(stateMachine.States.DashState)
 	elseif input.KeyCode == Enum.KeyCode.Space then
 		stateMachine:ChangeState(stateMachine.States.JumpState)

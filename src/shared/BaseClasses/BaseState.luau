@@ -13,7 +13,11 @@ end
 
 function BaseState:Enter(stateMachine) end
 
-function BaseState:Exit(stateMachine) end
+function BaseState:Exit(stateMachine)
+	if stateMachine and stateMachine.AnimationHandler and stateMachine.AnimationHandler.StopAll then
+		stateMachine.AnimationHandler:StopAll()
+	end
+end
 
 function BaseState:HandleInput(stateMachine, input: InputObject, eventType: string) end
 
