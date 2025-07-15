@@ -31,9 +31,10 @@ function BaseMachine:ChangeState(newState)
 	self.PreviousState = self.CurrentState
 	self.CurrentState = newState
 
-	if self.PreviousState then
-		self.PreviousState:Exit(self)
+	if self.PreviousState and self.PreviousState.Exit then
+		self.PreviousState:Exit()
 	end
+
 	self.CurrentState:Enter(self)
 end
 
@@ -52,6 +53,7 @@ function BaseMachine:DelegateUpdate(deltaTime)
 end
 
 function BaseMachine:Enable(state)
+	print("[StateMachine] Enabling:", self.Name)
 	self.CurrentState = state or self.DefaultState
 	self.Enabled = true
 
@@ -75,10 +77,13 @@ function BaseMachine:Enable(state)
 	table.insert(self.Connections, inputEnded)
 	table.insert(self.Connections, update)
 
-	self.CurrentState:Enter(self)
+	if self.CurrentState and self.CurrentState.Enter then
+		self.CurrentState:Enter(self)
+	end
 end
 
 function BaseMachine:Disable()
+	print("[StateMachine] Disabling:", self.Name)
 	for _, connection in self.Connections do
 		connection:Disconnect()
 	end

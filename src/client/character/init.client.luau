@@ -1,5 +1,4 @@
 --// Client Initialization
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 --// Imports
@@ -7,31 +6,28 @@ local Controller = require(ReplicatedStorage.Shared.Controller.StateMachineContr
 local MovementMachine = require(script.Movement.MovementMachine)
 local CombatMachine = require(script.Combat.CombatStateMachine)
 local BackDashVisualHandler = require(script.BackDashVisualHandler)
+local ClimbStateMachine = require(script.Climb.ClimbStateMachine)
 
---// Initialize character systems
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+--// Remotes
+local PlayerConfigEvent = ReplicatedStorage:WaitForChild("PlayerConfigEvent")
 
 --// Setup controller
-Controller.PlayerConfigs = {
-	WalkSpeed = 16,
-	RunSpeed = 24,
-	DashCharges = 3,
-	MaxDashCharges = 3,
-	DashRechargeTime = 1,
-	DashDuration = 0.4,
-	SideDashDistance = 6,
-	FrontDashDistance = 10,
-	BackDashDistance = 8,
-}
+Controller.PlayerConfigs = {}
+setmetatable(Controller, { __index = Controller })
+
+-- Listen for config from server
+PlayerConfigEvent.OnClientEvent:Connect(function(config)
+	Controller.PlayerConfigs = config
+end)
+
+-- Request config from server on join (in case of missed event)
+PlayerConfigEvent:FireServer()
 
 --// Setup machines
-MovementMachine.Controller = Controller
-CombatMachine.Controller = Controller
+local controller = Controller.new(MovementMachine, CombatMachine)
 
 --// Enable machines
-MovementMachine:Enable()
-CombatMachine:Enable()
+controller:EnableAllStates()
 
 --// Initialize backdash visual handler
 BackDashVisualHandler.Init()

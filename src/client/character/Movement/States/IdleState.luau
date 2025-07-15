@@ -6,10 +6,19 @@ local BaseState = require(ReplicatedStorage.Shared.BaseClasses.BaseState)
 local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
 --// Main
-local IdleState = BaseState.new("IdleState")
+local IdleState = {}
+IdleState.__index = IdleState
+setmetatable(IdleState, { __index = BaseState })
+
+function IdleState.new()
+	local self = setmetatable(BaseState.new("IdleState"), IdleState)
+	return self
+end
 
 function IdleState:Enter(stateMachine)
-	stateMachine.AnimationHandler:Play("Idle")
+	if not stateMachine.AnimationHandler:IsPlaying("Idle") then
+		stateMachine.AnimationHandler:Play("Idle")
+	end
 	stateMachine.CameraHandler:ChangeFOV("Idle")
 end
 
@@ -25,7 +34,6 @@ function IdleState:HandleInput(stateMachine, input, eventType)
 		else
 			stateMachine:ChangeState(stateMachine.States.WalkState)
 		end
-
 		lastW = os.clock()
 	elseif InputHandler.AnyPressed(Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
 		stateMachine:ChangeState(stateMachine.States.WalkState)

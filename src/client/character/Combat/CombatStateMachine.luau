@@ -20,20 +20,21 @@ local humanoidRP = character:WaitForChild("HumanoidRootPart")
 local CombatMachine = BaseStateMachine.new("MovementStateMachine")
 
 CombatMachine.States = {
-	IdleState = require(script.Parent.States.IdleState),
-	BlockState = require(script.Parent.States.BlockState),
-	LightAttackState = require(script.Parent.States.LightAttackState),
-	HeavyAttackState = require(script.Parent.States.HeavyAttackState),
+	IdleState = require(script.Parent.States.IdleState).new(),
+	BlockState = require(script.Parent.States.BlockState).new(),
+	LightAttackState = require(script.Parent.States.LightAttackState).new(),
+	HeavyAttackState = require(script.Parent.States.HeavyAttackState).new(),
 }
 
 CombatMachine.DefaultState = CombatMachine.States.IdleState
 
 -- movement instances
 CombatMachine.Character = character
+CombatMachine.Humanoid = humanoid
 CombatMachine.HumanoidRP = humanoidRP
 
 -- movement utils
 CombatMachine.SoundHandler = SoundHandler.new(SoundService.Movement)
-CombatMachine.AnimationHandler = AnimationHandler.new(character, ReplicatedStorage.Assets.Players.Animations.Movement)
+CombatMachine.AnimationHandler = AnimationHandler.new(character, ReplicatedStorage.Assets.Players.Animations.Combat)
 
 return CombatMachine

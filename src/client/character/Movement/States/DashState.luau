@@ -18,7 +18,14 @@ local CURRENT_GHOST_TIME = 0
 local DashSpring = Spring.create(Spring, 7)
 
 --// Main
-local DashState = BaseState.new("DashState")
+local DashState = {}
+DashState.__index = DashState
+setmetatable(DashState, { __index = BaseState })
+
+function DashState.new()
+	local self = setmetatable(BaseState.new("DashState"), DashState)
+	return self
+end
 
 local waitForGhost = false
 local accumulatedTime = 0
@@ -26,7 +33,20 @@ local isBackDashing = false
 
 function DashState:Enter(stateMachine)
 	local playerConfigs = stateMachine.Controller.PlayerConfigs
+
 	if InputHandler.AllPressed(Enum.KeyCode.S) and playerConfigs.DashCharges >= 3 then -- back
+		-- Disable combat state machine on backdash
+		local combatMachine = nil
+		for _, machine in ipairs(stateMachine.Controller.StateMachines or {}) do
+			if machine.Name == "CombatStateMachine" then
+				combatMachine = machine
+				break
+			end
+		end
+
+		if stateMachine.Controller and stateMachine.Controller.SetStateMachineEnabled and combatMachine then
+			stateMachine.Controller:SetStateMachineEnabled(combatMachine, false)
+		end
 		stateMachine.AnimationHandler:Play("Dash_Back")
 		stateMachine.CameraHandler:ChangeFOV("Dash")
 
@@ -54,8 +74,14 @@ function DashState:Enter(stateMachine)
 
 		-- Fire server event to replicate visual effects to other players
 		-- Only fire when backdash is actually successful
-		DashSpring.shove(DashSpring, Vector3.new(0, 0, playerConfigs.FrontDashDistance))
 		BackDashEvent:FireServer()
+		-- At the end of backdash, re-enable combat state machine
+		task.spawn(function()
+			task.wait(stateMachine.AnimationHandler.Tracks.Dash_Back.Length + 0.1)
+			if stateMachine.Controller and stateMachine.Controller.SetStateMachineEnabled and combatMachine then
+				stateMachine.Controller:SetStateMachineEnabled(combatMachine, true)
+			end
+		end)
 	elseif InputHandler.AllPressed(Enum.KeyCode.A) and playerConfigs.DashCharges >= 1 then -- left
 		stateMachine.AnimationHandler:Play("Dash_Left")
 		stateMachine.SoundHandler:Play("Dash_Side")

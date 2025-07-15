@@ -6,10 +6,19 @@ local BaseState = require(ReplicatedStorage.Shared.BaseClasses.BaseState)
 local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
 --// Main
-local WalkState = BaseState.new("WalkState")
+local WalkState = {}
+WalkState.__index = WalkState
+setmetatable(WalkState, { __index = BaseState })
+
+function WalkState.new()
+	local self = setmetatable(BaseState.new("WalkState"), WalkState)
+	return self
+end
 
 function WalkState:Enter(stateMachine)
-	stateMachine.AnimationHandler:Play("Walk")
+	if not stateMachine.AnimationHandler:IsPlaying("Walk") then
+		stateMachine.AnimationHandler:Play("Walk")
+	end
 	stateMachine.CameraHandler:ChangeFOV("Walk")
 	stateMachine.Humanoid.WalkSpeed = stateMachine.Controller.PlayerConfigs.WalkSpeed
 end

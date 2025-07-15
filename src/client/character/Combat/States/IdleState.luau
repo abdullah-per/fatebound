@@ -7,10 +7,17 @@ local BaseState = require(ReplicatedStorage.Shared.BaseClasses.BaseState)
 local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
 --// Main
-local IdleState = BaseState.new("IdleState")
+local IdleState = {}
+IdleState.__index = IdleState
+setmetatable(IdleState, { __index = BaseState })
+
+function IdleState.new()
+	local self = setmetatable(BaseState.new("IdleState"), IdleState)
+	return self
+end
 
 function IdleState:Enter(stateMachine)
-	-- stateMachine.AnimationHandler:Play("Idle")
+	stateMachine.AnimationHandler:StopAll()
 end
 
 function IdleState:HandleInput(stateMachine, input, eventType)
@@ -26,7 +33,5 @@ function IdleState:HandleInput(stateMachine, input, eventType)
 		stateMachine:ChangeState(stateMachine.States.BlockState)
 	end
 end
-
-function IdleState:Update(stateMachine, deltaTime) end
 
 return IdleState

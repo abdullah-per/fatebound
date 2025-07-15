@@ -26,12 +26,31 @@ function AnimationHandler.new(Rig, AnimationsFolder, getDescendants)
 end
 
 function AnimationHandler:Play(trackName)
+	local track = self.Tracks[trackName]
+	if not track then
+		warn("[AnimationHandler] Animation '" .. tostring(trackName) .. "' not found.")
+		return
+	end
 	if self.PreviousTrack then
 		self.PreviousTrack:Stop()
 	end
+	track:Play()
+	self.PreviousTrack = track
+end
 
-	self.Tracks[trackName]:Play()
-	self.PreviousTrack = self.Tracks[trackName]
+function AnimationHandler:IsPlaying(trackName)
+	local track = self.Tracks[trackName]
+	if not track then
+		warn("[AnimationHandler] Animation '" .. tostring(trackName) .. "' not found.")
+		return false
+	end
+	return track.IsPlaying
+end
+
+function AnimationHandler:StopAll()
+	for _, track in self.Tracks do
+		track:Stop()
+	end
 end
 
 return AnimationHandler

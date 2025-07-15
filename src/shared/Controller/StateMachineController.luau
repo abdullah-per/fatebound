@@ -2,6 +2,8 @@
 local StateController = {}
 StateController.__index = StateController
 
+StateController.PlayerConfigs = nil
+
 function StateController.new(...)
 	local self = setmetatable({}, StateController)
 	self.StateMachines = { ... }
@@ -26,7 +28,7 @@ function StateController:DisableAllStates()
 	end
 end
 
-function StateController:EnableState(stateMachine)
+function StateController:EnableStateMachine(stateMachine)
 	for _, listedStateMachine in self.StateMachines do
 		if listedStateMachine == stateMachine then
 			listedStateMachine:Enable()
@@ -34,12 +36,28 @@ function StateController:EnableState(stateMachine)
 	end
 end
 
-function StateController:DisableState(stateMachine)
+function StateController:DisableStateMachine(stateMachine)
 	for _, listedStateMachine in self.StateMachines do
 		if listedStateMachine == stateMachine then
 			listedStateMachine:Disable()
 		end
 	end
+end
+
+function StateController:SetStateMachineEnabled(stateMachine, enabled)
+	for _, listedStateMachine in self.StateMachines do
+		if listedStateMachine == stateMachine then
+			if enabled then
+				listedStateMachine:Enable()
+			else
+				listedStateMachine:Disable()
+			end
+		end
+	end
+end
+
+function StateController:SetStateMachines(stateMachines)
+	self.StateMachines = stateMachines
 end
 
 return StateController

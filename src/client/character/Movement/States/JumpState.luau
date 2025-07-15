@@ -6,11 +6,20 @@ local BaseState = require(ReplicatedStorage.Shared.BaseClasses.BaseState)
 local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 
 --// Main
-local JumpState = BaseState.new("JumpState")
+local JumpState = {}
+JumpState.__index = JumpState
+setmetatable(JumpState, { __index = BaseState })
+
+function JumpState.new()
+	local self = setmetatable(BaseState.new("JumpState"), JumpState)
+	return self
+end
 
 function JumpState:Enter(stateMachine)
-	-- stateMachine.AnimationHandler:Play("Dash_Back")
-	-- stateMachine.CameraHandler:ChangeFOV("Jump")
+	if not stateMachine.AnimationHandler:IsPlaying("Jump") then
+		stateMachine.AnimationHandler:Play("Jump")
+	end
+	stateMachine.CameraHandler:ChangeFOV("Jump")
 end
 
 function JumpState:HandleInput(stateMachine, input, eventType)
@@ -22,7 +31,6 @@ end
 function JumpState:Update(stateMachine, deltaTime)
 	if stateMachine.Humanoid:GetState() == Enum.HumanoidStateType.Landed then
 		if InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
-			-- Check if we should return to running state
 			if
 				stateMachine.PreviousState == stateMachine.States.RunState
 				or stateMachine.BeforePreviousState == stateMachine.States.RunState
