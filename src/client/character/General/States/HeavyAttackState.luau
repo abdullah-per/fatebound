@@ -48,7 +48,7 @@ function HeavyAttackState:Enter(stateMachine)
 	local uniqueTargets = CombatUtils.getUniqueParentsFromParts(detectedParts)
 
 	if #uniqueTargets > 0 then
-		HitEvent:FireServer("HeavyAttack", uniqueTargets)
+		HitEvent:FireServer(configs.HeavyAttackDamage, uniqueTargets, "Hard")
 	end
 
 	-- Wait for animation to finish

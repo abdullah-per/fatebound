@@ -5,11 +5,28 @@ local ClimbDropState = BaseState.new("ClimbDropState")
 
 function ClimbDropState:Enter(stateMachine)
 	local humanoidRoot = stateMachine.HumanoidRP
+	local humanoid = stateMachine.Humanoid
 	if humanoidRoot then
 		humanoidRoot.Anchored = false
 	end
-	-- After a short delay, transition back to waiting state
+	-- After a short delay, re-enable everything and transition back to waiting state
 	task.delay(0.2, function()
+		if humanoid then
+			humanoid.AutoRotate = true
+		end
+		if stateMachine.Controller and stateMachine.Controller.MovementMachine then
+			stateMachine.Controller:SetStateMachineEnabled(stateMachine.Controller.MovementMachine, true)
+		end
+		if stateMachine.Controller and stateMachine.Controller.CombatMachine then
+			stateMachine.Controller:SetStateMachineEnabled(stateMachine.Controller.CombatMachine, true)
+		end
+		if
+			stateMachine.Controller
+			and stateMachine.Controller.MovementMachine
+			and stateMachine.Controller.MovementMachine.CameraHandler
+		then
+			stateMachine.Controller.MovementMachine.CameraHandler:ChangeFOV("Idle")
+		end
 		stateMachine:ChangeState(stateMachine.States.WaitingState)
 	end)
 end

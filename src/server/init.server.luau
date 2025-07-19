@@ -14,3 +14,8 @@ local PlayerConfigHandler = require(script.Handlers.PlayerConfigHandler)
 task.spawn(function()
 	PlayerConfigHandler:StartPeriodicResend()
 end)
+
+-- Ensure BlockEvent RemoteEvent is created
+require(ReplicatedStorage.Shared.Remotes.Combat.BlockEvent)
+-- Ensure BlockOverloadVisualEvent RemoteEvent is created
+require(ReplicatedStorage.Shared.Remotes.Combat.BlockOverloadVisualEvent)

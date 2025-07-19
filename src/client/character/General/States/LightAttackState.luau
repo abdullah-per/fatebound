@@ -50,7 +50,12 @@ function LightAttackState:Enter(stateMachine)
 
 	-- Slow the player
 	self._originalWalkSpeed = stateMachine.Humanoid.WalkSpeed
-	stateMachine.Humanoid.WalkSpeed = 2
+	stateMachine.Humanoid.WalkSpeed = 6
+
+	-- Play swing sound
+	if stateMachine.SoundHandler then
+		stateMachine.SoundHandler:Play("PunchSwing")
+	end
 
 	stateMachine.AnimationHandler:Play(`M{self.comboCount}`)
 	local animTrack = stateMachine.AnimationHandler.Tracks[`M{self.comboCount}`]
@@ -67,7 +72,10 @@ function LightAttackState:Enter(stateMachine)
 	local uniqueTargets = CombatUtils.getUniqueParentsFromParts(detectedParts)
 
 	if #uniqueTargets > 0 then
-		HitEvent:FireServer("LightAttack", uniqueTargets)
+		if stateMachine.SoundHandler then
+			stateMachine.SoundHandler:Play("PunchHit")
+		end
+		HitEvent:FireServer(configs.LightAttackDamage, uniqueTargets, "Soft")
 	end
 
 	-- Wait for animation to finish

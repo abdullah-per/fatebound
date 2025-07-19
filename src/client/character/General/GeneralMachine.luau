@@ -52,12 +52,27 @@ GeneralStateMachine.Controller.PlayerConfigs.BlockWalkSpeed = 8 -- Default block
 function GeneralStateMachine:DelegateUpdate(deltaTime)
 	BaseStateMachine.DelegateUpdate(GeneralStateMachine, deltaTime)
 
-	if self.CurrentState ~= self.States.DashState then
-		if self.Controller.PlayerConfigs.DashCharges <= 3 then
-			self.Controller.PlayerConfigs.DashCharges += (self.Controller.PlayerConfigs.DashRechargeTime * deltaTime)
-			self.Controller.PlayerConfigs.DashCharges =
-				math.min(self.Controller.PlayerConfigs.DashCharges, self.Controller.PlayerConfigs.MaxDashCharges)
+	--// Dash charge system
+	if not self.Controller or not self.Controller.PlayerConfigs then
+		warn("GeneralStateMachine: PlayerConfigs not found!")
+		return
+	end
+
+	local playerConfigs = self.Controller.PlayerConfigs
+
+	playerConfigs.MaxDashCharges = playerConfigs.MaxDashCharges or 3
+	playerConfigs.CurrentChargeRechargeProgress = playerConfigs.CurrentChargeRechargeProgress or 0
+
+	if self.CurrentState ~= self.States.DashState and playerConfigs.DashCharges < playerConfigs.MaxDashCharges then
+		playerConfigs.CurrentChargeRechargeProgress += deltaTime
+
+		if playerConfigs.CurrentChargeRechargeProgress >= playerConfigs.DashRechargeTime then
+			playerConfigs.DashCharges += 1
+			playerConfigs.CurrentChargeRechargeProgress %= playerConfigs.DashRechargeTime
+			playerConfigs.DashCharges = math.min(playerConfigs.DashCharges, playerConfigs.MaxDashCharges)
 		end
+	elseif playerConfigs.DashCharges == playerConfigs.MaxDashCharges then
+		playerConfigs.CurrentChargeRechargeProgress = 0
 	end
 end
 

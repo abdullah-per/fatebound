@@ -10,17 +10,27 @@ PlayerConfig.Defaults = {
 	DashDuration = 0.4,
 	SideDashDistance = 6,
 	FrontDashDistance = 10,
+	FrontDashMaxDistance = 15,
 	BackDashDistance = 8,
+
 	-- Combat configs (add as needed)
 	LightAttackDamage = 10,
 	HeavyAttackDamage = 20,
 	BlockStaminaCost = 5,
+
+	BlockLimit = 40, -- Maximum block overload before breaking
+	BlockOverloadDecay = 5, -- Overload decay per second when not blocking
+	BlockBreakStunDuration = 1, -- Stun duration in seconds after block break
+
 	LightAttackComboWindow = 1, -- seconds
 	LightAttackMaxCombo = 2,
 	LightAttackDetectionRange = 4, -- studs
 	LightAttackDetectionSize = Vector3.new(4, 4, 4),
 	HeavyAttackDetectionRange = 4, -- studs
 	HeavyAttackDetectionSize = Vector3.new(4, 4, 4),
+
+	-- Block overload reduction config
+	BlockOverloadReductionPerSecond = 5, -- How much block overload is reduced per second when not blocking
 
 	-- Climbing configs
 	ClimbMaxStamina = 100,
