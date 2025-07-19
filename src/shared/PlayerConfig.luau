@@ -8,15 +8,14 @@ PlayerConfig.Defaults = {
 	MaxDashCharges = 3,
 	DashRechargeTime = 1,
 	DashDuration = 0.4,
-	SideDashDistance = 6,
-	FrontDashDistance = 10,
-	FrontDashMaxDistance = 20,
+	SideDashDistance = 4,
+	FrontDashDistance = 8,
+	FrontDashMaxDistance = 30,
 	BackDashDistance = 8,
 
 	-- Combat configs (add as needed)
 	LightAttackDamage = 10,
 	HeavyAttackDamage = 20,
-	BlockStaminaCost = 5,
 
 	BlockLimit = 40, -- Maximum block overload before breaking
 	BlockOverloadDecay = 5, -- Overload decay per second when not blocking
