@@ -80,10 +80,17 @@ function BlockBarHandler.Init()
 		end
 
 		if overload >= limit then
+			TweenService:Create(blockBar, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
+			TweenService:Create(barFill, TweenInfo.new(0.2), { BackgroundTransparency = 1 }):Play()
+			task.spawn(function()
+				task.wait(0.2)
+				blockBar.Visible = false
+			end)
+
 			-- Switch to IdleState if block bar is full
-			GeneralStateMachine:ChangeState(GeneralStateMachine.States.IdleState)
 			GeneralStateMachine:Disable()
-			task.wait(1.5)
+			GeneralStateMachine.AnimationHandler.Tracks.Overload:Play()
+			task.wait(GeneralStateMachine.AnimationHandler.Tracks.Overload.Length)
 			GeneralStateMachine:Enable(GeneralStateMachine.States.IdleState)
 		end
 	end

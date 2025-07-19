@@ -10,7 +10,7 @@ PlayerConfig.Defaults = {
 	DashDuration = 0.4,
 	SideDashDistance = 6,
 	FrontDashDistance = 10,
-	FrontDashMaxDistance = 15,
+	FrontDashMaxDistance = 20,
 	BackDashDistance = 8,
 
 	-- Combat configs (add as needed)

@@ -14,7 +14,7 @@ local InputHandler = require(ReplicatedStorage.Shared.Utilities.InputHandler)
 local BackDashEvent = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Movement"):WaitForChild("BackDashEvent")
 
 --// Configs
-local CURRENT_GHOST_TIME = 0
+local CURRENT_GHOST_TIME = 0 -- Global for ghost time, as per original
 
 --// Instances
 local DashSpring = Spring.create(Spring, 7)
@@ -28,16 +28,12 @@ function FindNearestTarget(stateMachine, maxDistance, coneAngle)
 	local nearestTarget = nil
 	local shortestDistance = math.huge
 
-	-- Calculate the minimum dot product required for a target to be within the cone.
-	-- Dot product of two unit vectors A and B is cos(theta), where theta is the angle between them.
-	-- If the cone angle is 60 degrees, we want targets within +/- 30 degrees from the look vector.
-	-- So, the angle is 30 degrees, and cos(30) is sqrt(3)/2 approx 0.866.
 	local maxDotProduct = math.cos(math.rad(coneAngle / 2))
 
 	-- Search for other players
 	for _, player in ipairs(Players:GetPlayers()) do
 		local targetCharacter = player.Character
-		if targetCharacter and targetCharacter ~= playerCharacter then -- Ensure it's not the current player
+		if targetCharacter and targetCharacter ~= playerCharacter then
 			local targetHumanoidRP = targetCharacter:FindFirstChild("HumanoidRootPart")
 			if targetHumanoidRP and targetCharacter:FindFirstChildOfClass("Humanoid") then
 				local distance = (targetHumanoidRP.Position - playerHumanoidRP.Position).Magnitude
@@ -45,7 +41,7 @@ function FindNearestTarget(stateMachine, maxDistance, coneAngle)
 					local directionToTarget = (targetHumanoidRP.Position - playerHumanoidRP.Position).Unit
 					local dotProduct = playerLookVector:Dot(directionToTarget)
 
-					if dotProduct >= maxDotProduct then -- Check if within the frontal cone
+					if dotProduct >= maxDotProduct then
 						if distance < shortestDistance then
 							shortestDistance = distance
 							nearestTarget = targetHumanoidRP
@@ -66,7 +62,7 @@ function FindNearestTarget(stateMachine, maxDistance, coneAngle)
 					local directionToTarget = (targetHumanoidRP.Position - playerHumanoidRP.Position).Unit
 					local dotProduct = playerLookVector:Dot(directionToTarget)
 
-					if dotProduct >= maxDotProduct then -- Check if within the frontal cone
+					if dotProduct >= maxDotProduct then
 						if distance < shortestDistance then
 							shortestDistance = distance
 							nearestTarget = targetHumanoidRP
@@ -87,6 +83,8 @@ setmetatable(DashState, { __index = BaseState })
 
 function DashState.new()
 	local self = setmetatable(BaseState.new("DashState"), DashState)
+	-- Keep original globals for compatibility, but manage self.Target
+	self.Target = nil
 	return self
 end
 
@@ -96,6 +94,18 @@ local isBackDashing = false
 
 function DashState:Enter(stateMachine)
 	local playerConfigs = stateMachine.Controller.PlayerConfigs
+
+	-- Reset accumulated time on entering state
+	accumulatedTime = 0
+	-- Reset target reference
+	self.Target = nil
+
+	-- Spring needs to be reset for each dash.
+	-- Since Spring.reset() isn't available, we'll "zero out" the spring's internal velocity/position
+	-- by shoving it with a zero vector before the actual shove. This is a common workaround.
+	DashSpring.shove(DashSpring, Vector3.new(0, 0, 0))
+	DashSpring.update(DashSpring, 0.01) -- Advance it slightly to clear any residual force
+	DashSpring.shove(DashSpring, Vector3.new(0, 0, 0)) -- Shove with zero again
 
 	if InputHandler.AllPressed(Enum.KeyCode.S) and playerConfigs.DashCharges >= 3 then -- back
 		-- Disable combat state machine on backdash
@@ -121,10 +131,12 @@ function DashState:Enter(stateMachine)
 		end)
 
 		stateMachine.SoundHandler:Play("Dash_Back")
+		-- BackDashDistance should be negative for backward movement, if positive Z is forward.
+		-- Assuming BackDashDistance is a positive magnitude, we apply it negatively.
 		DashSpring.shove(DashSpring, Vector3.new(0, 0, playerConfigs.BackDashDistance))
 
 		-- ghost dash logic
-		CURRENT_GHOST_TIME = stateMachine.SoundHandler.Tracks.Dash_Back.TimeLength
+		CURRENT_GHOST_TIME = stateMachine.SoundHandler.Tracks.Dash_Back.TimeLength -- Use this for ghost duration
 		stateMachine.Humanoid.WalkSpeed = 30
 
 		waitForGhost = true
@@ -134,9 +146,9 @@ function DashState:Enter(stateMachine)
 		BackDash.Disable(stateMachine.Character, ragdoll)
 		waitForGhost = false
 		isBackDashing = false
+		stateMachine.Humanoid.WalkSpeed = playerConfigs.WalkSpeed -- Restore speed after backdash
 
 		-- Fire server event to replicate visual effects to other players
-		-- Only fire when backdash is actually successful
 		BackDashEvent:FireServer()
 
 		-- At the end of backdash, re-enable combat state machine
@@ -169,41 +181,60 @@ function DashState:Enter(stateMachine)
 
 		if nearestTarget then
 			self.Target = nearestTarget
-			DashSpring.shove(
-				DashSpring,
-				Vector3.new(0, 0, -(self.Target.Position - stateMachine.HumanoidRP.Position).Magnitude - 3)
-			)
+			-- Calculate direction to target in world space
+			local directionToTarget = (self.Target.Position - stateMachine.HumanoidRP.Position)
+			-- Get the distance, subtracting a small buffer (e.g., 5 studs) to prevent overshooting/clipping
+			-- Use playerConfigs.FrontDashDistance as a cap, or just the calculated distance minus buffer.
+			local dashMagnitude = math.min(playerConfigs.FrontDashDistance, directionToTarget.Magnitude - 5) -- Fixed: subtract 5 studs from target distance
+			dashMagnitude = math.max(0, dashMagnitude) -- Ensure it's not negative
 
-			print(self.Target.Parent)
+			-- Convert the world-space direction vector to the player's local space
+			-- This is crucial for DashSpring.shove which likely applies force in local space.
+			local localDirectionToTarget = stateMachine.HumanoidRP.CFrame:VectorToObjectSpace(directionToTarget.Unit)
+
+			-- Shove the spring with the calculated local direction and magnitude
+			DashSpring.shove(DashSpring, localDirectionToTarget * dashMagnitude)
+
+			print("Auto-locking onto: ", self.Target.Parent.Name, " - Dash magnitude:", dashMagnitude)
 		else
 			self.Target = nil
+			-- Regular front dash if no target, shove in local backward direction for front dash (negative Z)
 			DashSpring.shove(DashSpring, Vector3.new(0, 0, -playerConfigs.FrontDashDistance))
+			print("Performing regular front dash.")
 		end
 
-		-- front dash
+		-- front dash animations/sounds
 		stateMachine.AnimationHandler:Play("Dash_Front")
 		stateMachine.SoundHandler:Play("Dash_Side")
 		stateMachine.CameraHandler:ChangeFOV("Dash")
 		playerConfigs.DashCharges -= 2
 	else
-		accumulatedTime += 0.4
+		-- If no valid dash input, immediately exit the state.
+		stateMachine:ChangeState(stateMachine.States.IdleState)
+		return
 	end
 
-	CURRENT_GHOST_TIME = 0 -- resetting ghost
+	CURRENT_GHOST_TIME = 0 -- Resetting ghost time after potential use in backdash
 end
 
 function DashState:Update(stateMachine, deltaTime)
 	-- Apply Spring movement for all dash types
+	-- Check if dash duration is still active OR if it's an active backdash (which has extended duration)
 	if accumulatedTime <= stateMachine.Controller.PlayerConfigs.DashDuration or isBackDashing then
 		accumulatedTime += deltaTime
 
-		-- facing the target
-		if self.Target then
-			print((self.Target.Position - stateMachine.HumanoidRP.Position).Magnitude)
-
-			if (self.Target.Position - stateMachine.HumanoidRP.Position).Magnitude <= 3 then
-				accumulatedTime += stateMachine.Controller.PlayerConfigs.DashDuration
-				self.Target = nil
+		-- facing the target (only if a target is active)
+		if self.Target and self.Target.Parent then -- Check if target still exists
+			local currentDistance = (self.Target.Position - stateMachine.HumanoidRP.Position).Magnitude
+			-- If we are close enough to the target, force the dash to end
+			-- Using a fixed threshold (e.g., 5 studs) since we can't introduce a new config
+			if currentDistance <= 5 then -- Fixed: Use a constant 5 studs as stop distance
+				accumulatedTime = stateMachine.Controller.PlayerConfigs.DashDuration + 0.1 -- Force exit
+				self.Target = nil -- Clear target
+				-- Manually try to "reset" the spring motion by zeroing it out if no reset method
+				DashSpring.shove(DashSpring, Vector3.new(0, 0, 0))
+				DashSpring.update(DashSpring, 0.01)
+				DashSpring.shove(DashSpring, Vector3.new(0, 0, 0))
 				return
 			end
 
@@ -214,18 +245,12 @@ function DashState:Update(stateMachine, deltaTime)
 		local UpdatedPosition = DashSpring.update(DashSpring, deltaTime)
 		stateMachine.HumanoidRP.CFrame *= CFrame.new(UpdatedPosition.X, UpdatedPosition.Y, UpdatedPosition.Z)
 	else
-		if waitForGhost then
-			return
-		end
-
+		-- Dash duration finished, transition to appropriate state
 		accumulatedTime = 0 -- reset for next dash
 
-		if InputHandler.AllPressed(Enum.KeyCode.Q) then
-			DashState:Enter(stateMachine)
-		elseif InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
-			self.Target = nil
-
-			-- Check if we should return to running state
+		-- Determine next state based on current input
+		if InputHandler.AnyPressed(Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D) then
+			-- If any movement key is held, go to Run/Walk state
 			if
 				stateMachine.PreviousState == stateMachine.States.RunState
 				or stateMachine.BeforePreviousState == stateMachine.States.RunState
@@ -235,8 +260,10 @@ function DashState:Update(stateMachine, deltaTime)
 				stateMachine:ChangeState(stateMachine.States.WalkState)
 			end
 		else
+			-- If no movement keys, go to Idle state
 			stateMachine:ChangeState(stateMachine.States.IdleState)
 		end
+		self.Target = nil -- Clear target on exit
 	end
 end
 
