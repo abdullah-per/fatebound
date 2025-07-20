@@ -42,7 +42,7 @@ local BlockOverloadVisualEvent = require(ReplicatedStorage.Shared.Remotes.Combat
 -- New RemoteEvent for Invincibility
 local InvincibilityEvent = require(ReplicatedStorage.Shared.Remotes.Combat.InvincibilityEvent)
 -- New RemoteEvent for Stun Visuals
-local StunVisualEvent = require(ReplicatedStorage.Shared.Remotes.Combat.StunVisualEvent)
+local StunEvent = require(ReplicatedStorage.Shared.Remotes.Combat.StunEvent)
 
 local CombatHandler = {}
 
@@ -505,6 +505,10 @@ function CombatHandler.ApplyStun(character, stunTypeName, duration)
 				end
 			end
 		end
+
+		local targetPlayer = Players:GetPlayerFromCharacter(character)
+		StunEvent:FireClient(targetPlayer, stunTypeName, duration)
+
 		-- Clean up the thread reference after it completes
 		if stunThreads[player.UserId] then
 			stunThreads[player.UserId][stunTypeName] = nil

@@ -35,25 +35,25 @@ function HeavyAttackState:Enter(stateMachine)
 
 	stateMachine.AnimationHandler:Play("HeavyAttack")
 	local animTrack = stateMachine.AnimationHandler.Tracks.HeavyAttack
-	local animLength = animTrack and animTrack.Length or 0.5
 
-	-- Temporary delay before hit detection for realism
-	task.wait(0.15)
+	animTrack:GetMarkerReachedSignal("HitEvent"):Connect(function()
+		-- Detect enemies in range
+		local characterRoot = stateMachine.Character.HumanoidRootPart
+		local detectionPosition = characterRoot.CFrame * CFrame.new(0, 0, -configs.HeavyAttackDetectionRange)
+		local detectedParts =
+			workspace:GetPartBoundsInBox(detectionPosition, configs.HeavyAttackDetectionSize, overlapParams)
+		local uniqueTargets = CombatUtils.getUniqueParentsFromParts(detectedParts)
 
-	-- Detect enemies in range
-	local characterRoot = stateMachine.Character.HumanoidRootPart
-	local detectionPosition = characterRoot.CFrame * CFrame.new(0, 0, -configs.HeavyAttackDetectionRange)
-	local detectedParts =
-		workspace:GetPartBoundsInBox(detectionPosition, configs.HeavyAttackDetectionSize, overlapParams)
-	local uniqueTargets = CombatUtils.getUniqueParentsFromParts(detectedParts)
+		if #uniqueTargets > 0 then
+			HitEvent:FireServer(configs.HeavyAttackDamage, uniqueTargets, "Hard")
 
-	if #uniqueTargets > 0 then
-		HitEvent:FireServer(configs.HeavyAttackDamage, uniqueTargets, "Hard")
-	end
+			if stateMachine.SoundHandler then
+				stateMachine.SoundHandler:Play("PunchHit")
+			end
+		end
+	end)
 
-	-- Wait for animation to finish
-	task.wait(animLength - 0.15)
-
+	task.wait(animTrack.Length)
 	-- Restore speed
 	stateMachine.Humanoid.WalkSpeed = self._originalWalkSpeed or configs.WalkSpeed
 

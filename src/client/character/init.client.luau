@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Controller = require(ReplicatedStorage.Shared.Controller.StateMachineController)
 local MovementMachine = require(script.General.GeneralMachine)
 local ClimbStateMachine = require(script.Climb.ClimbStateMachine)
+local GeneralMachine = require(script.General.GeneralMachine)
 
 --// Remotes
 local PlayerConfigEvent = ReplicatedStorage:WaitForChild("PlayerConfigEvent")
@@ -43,3 +44,12 @@ HealthBarHandler.Init(MovementMachine.Humanoid)
 -- Initialize dash bar UI handler
 local DashBarHandler = require(script.VisualHandlers.DashBarHandler)
 DashBarHandler.Init(MovementMachine)
+
+-- Stun
+local StunEvent = require(ReplicatedStorage.Shared.Remotes.Combat.StunEvent)
+StunEvent.OnClientEvent:Connect(function(stunType, duration)
+	GeneralMachine:ChangeState(GeneralMachine.States.IdleState)
+	GeneralMachine:Disable()
+	task.wait(duration)
+	GeneralMachine:Enable()
+end)
